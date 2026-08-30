@@ -1,0 +1,5 @@
+// RS_Darkness -- engine is UZDXREMA 5.0.0-rc.2; 4.12 is a safe floor.
+version "4.12"
+
+#include "zscript/rsd_presets.zs"
+#include "zscript/rsd_handler.zs"

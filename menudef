@@ -1,0 +1,100 @@
+OptionValue "RSD_Preset"
+{
+	 0, "Off"
+	 1, "Light"
+	 2, "Classic"
+	 3, "Dark"
+	 4, "Horizon"
+	 5, "Tunnel"
+	 6, "Abyss"
+	 7, "Undertow"
+	 8, "Silt"
+	 9, "Nightfall"
+	10, "Overcast"
+	11, "Crush"
+	12, "Cavern"
+}
+
+OptionValue "RSD_Mode"
+{
+	0, "Off"
+	1, "Subtract"
+	2, "Compress"
+	3, "Cap brightest"
+	4, "Deepen shadows"
+}
+
+OptionValue "RSD_HeightMode"
+{
+	0, "Fixed height"
+	1, "Follows your feet"
+}
+
+OptionMenu "RSDMain"
+{
+	Title "Darkness"
+	StaticText "Evaluated per pixel in the shader, not by", "gray"
+	StaticText "rewriting sector light. Nothing is written", "gray"
+	StaticText "to the map, so nothing needs undoing.", "gray"
+	StaticText ""
+	Option "Enabled", "rsd_enabled", "OnOff"
+	Option "Preset", "rsd_preset", "RSD_Preset"
+	StaticText "A preset overwrites everything below.", "gold"
+	StaticText ""
+	StaticText "Light/Classic/Dark are DarkDoom's exactly.", "gray"
+	StaticText "Everything below them uses distance or", "gray"
+	StaticText "height - terms a sector cannot express.", "gray"
+	StaticText ""
+	Submenu "Curve", "RSDCurve"
+	Submenu "Distance", "RSDDist"
+	Submenu "Height", "RSDHeight"
+}
+
+OptionMenu "RSDCurve"
+{
+	Title "Curve"
+	StaticText "The four DarkDoom curves, unchanged. What", "gray"
+	StaticText "differs is the input: this pixel's own light", "gray"
+	StaticText "rather than the whole room's.", "gray"
+	StaticText ""
+	Option "Curve", "rsd_mode", "RSD_Mode"
+	Slider "Amount", "rsd_adjust", 0, 256, 4, 0
+	StaticText "96 = Light, 128 = Classic, 256 = total black", "gold"
+	StaticText ""
+	Slider "Minimum light", "rsd_minlight", 0, 255, 1, 0
+	StaticText "Light that survives everything. Must be 0", "gold"
+	StaticText "for Dark to reach true black.", "gold"
+	StaticText ""
+	Slider "Pre-gain (before curve)", "rsd_pregain", -128, 128, 2, 0
+	Slider "Post-gain (after curve)", "rsd_postgain", -128, 128, 2, 0
+}
+
+OptionMenu "RSDDist"
+{
+	Title "Distance"
+	StaticText "Darkness deepening with range from the eye.", "gray"
+	StaticText "A sector cannot express this at all - it is", "gray"
+	StaticText "what makes a dark room read as having depth", "gray"
+	StaticText "instead of as a lowered brightness slider.", "gray"
+	StaticText ""
+	Slider "Depth", "rsd_dist", 0, 1, 0.05, 2
+	Slider "Range (map units)", "rsd_dist_range", 64, 4096, 64, 0
+}
+
+OptionMenu "RSDHeight"
+{
+	Title "Height"
+	StaticText "Dark pooling below a reference height.", "gray"
+	StaticText "Above it, nothing changes.", "gray"
+	StaticText ""
+	Slider "Depth", "rsd_height", 0, 1, 0.05, 2
+	Slider "Range below (map units)", "rsd_height_range", 32, 1024, 16, 0
+	StaticText ""
+	Option "Reference", "rsd_height_mode", "RSD_HeightMode"
+	Slider "  Fixed height (Z)", "rsd_height_z", -2048, 2048, 32, 0
+}
+
+AddOptionMenu "OptionsMenu"
+{
+	Submenu "Darkness", "RSDMain"
+}

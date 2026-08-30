@@ -1,0 +1,114 @@
+// RS_Darkness -- the handler.
+//
+// Almost nothing happens here, and that is the point. DarkDoomZ needs ~110
+// lines to walk every sector, rewrite Sector.LightLevel through a curve, keep
+// a backup array so it can undo itself, and fire a network event every single
+// UiTick to notice a slider moved. This pushes two calls.
+//
+// The reason it can be this small is that the four curves already live in the
+// fragment shader (main.fp:1580), transcribed from the same ZScript with the
+// same constants. Nothing is written to the map, so there is no state to
+// restore, nothing to fight over, and turning it off is genuinely just
+// stopping rather than undoing.
+
+class RSD_Handler : EventHandler
+{
+	private int lastPreset;
+
+	override void WorldLoaded(WorldEvent e)
+	{
+		lastPreset = GetI("rsd_preset", 2);
+		RSD_Presets.Apply(lastPreset);
+		ResolveHeightRef();
+		Push();
+	}
+
+	override void WorldTick()
+	{
+		int p = GetI("rsd_preset", 2);
+		if (p != lastPreset)
+		{
+			lastPreset = p;
+			RSD_Presets.Apply(p);
+		}
+
+		ResolveHeightRef();
+		Push();
+	}
+
+	// The playsim stops while the menu is up, so WorldTick alone would freeze
+	// the picture exactly while you are dragging the slider meant to change
+	// it. SetDarkness is clearscope for this reason -- see doombase.zs:1139.
+	override void UiTick()
+	{
+		Push();
+	}
+
+	// Play scope: "where the player's feet are" reads the world, so it cannot
+	// live in the clearscope push. It lands in a CVar instead, which keeps the
+	// push reachable from UI scope and keeps follow mode from overwriting the
+	// slider the user set.
+	void ResolveHeightRef()
+	{
+		if (GetI("rsd_height_mode", 0) == 1)
+		{
+			let pmo = players[consoleplayer].mo;
+			if (pmo)
+			{
+				SetF("rsd_height_live", pmo.pos.z);
+				return;
+			}
+		}
+		SetF("rsd_height_live", GetF("rsd_height_z", 0.0));
+	}
+
+	clearscope void Push()
+	{
+		if (!Level) return;
+
+		if (!GetB("rsd_enabled", true))
+		{
+			// Mode 0 is off in the shader, so this is a real stop rather than
+			// a restore. Nothing was ever written to a sector to put back.
+			Level.SetDarkness(0, 0, 0, 0, 0);
+			Level.SetDarknessSpace(0, 0, 0, 0, 0);
+			return;
+		}
+
+		Level.SetDarkness(
+			GetI("rsd_mode", 1),
+			GetF("rsd_adjust", 128.0),
+			GetF("rsd_minlight", 0.0),
+			GetF("rsd_pregain", 0.0),
+			GetF("rsd_postgain", 0.0));
+
+		Level.SetDarknessSpace(
+			GetF("rsd_dist", 0.0),
+			GetF("rsd_dist_range", 1024.0),
+			GetF("rsd_height", 0.0),
+			GetF("rsd_height_live", 0.0),
+			GetF("rsd_height_range", 256.0));
+	}
+
+	// ---- cvar shorthand, clearscope so the push can reach it ---------------
+
+	clearscope static double GetF(String n, double def = 0.0)
+	{
+		let c = CVar.FindCVar(n); return c ? c.GetFloat() : def;
+	}
+
+	clearscope static int GetI(String n, int def = 0)
+	{
+		let c = CVar.FindCVar(n); return c ? c.GetInt() : def;
+	}
+
+	clearscope static bool GetB(String n, bool def = false)
+	{
+		let c = CVar.FindCVar(n); return c ? c.GetBool() : def;
+	}
+
+	clearscope static void SetF(String n, double v)
+	{
+		let c = CVar.FindCVar(n); if (c) c.SetFloat(v);
+	}
+}

@@ -1,0 +1,53 @@
+// RS_Darkness -- CVars
+//
+// Darkness as a shader term rather than a per-sector rewrite.
+//
+// DarkDoomZ walks every sector and overwrites Sector.LightLevel, which means
+// it holds a backup array to undo itself, destroys Lighting thinkers rather
+// than fight them for the same field, and can only ever be uniform wall to
+// wall inside one sector. This drives Level.SetDarkness instead: same four
+// curves, same constants, evaluated against each fragment's own light. It
+// writes nothing to the map, so there is nothing to undo and nothing to fight.
+
+// ---------------------------------------------------------------- master --
+server bool  rsd_enabled   = true;
+server int   rsd_preset    = 4;          // Horizon -- distance, the thing a sector cannot do
+
+// ----------------------------------------------------------------- curve --
+// 0 off, 1 subtract, 2 compress, 3 cap brightest, 4 deepen shadows.
+// Transcribed from DarkDoomZ, which took them from the original DarkDoom.
+server int   rsd_mode      = 1;
+
+// How hard, in Doom's 0-255 light units. 96/128/256 are Lite/Classic/Black.
+server float rsd_adjust    = 128.0;
+
+// A floor under the result. MUST be 0 for the Dark preset to reach true
+// black -- any value here is light that survives everything.
+server float rsd_minlight  = 0.0;
+
+// Lifts before the curve / after it.
+server float rsd_pregain   = 0.0;
+server float rsd_postgain  = 0.0;
+
+// ------------------------------------------------------------- distance --
+// Darkness deepening with range from the eye. A sector cannot express this at
+// all -- it is the term that makes a dark room read as having depth rather
+// than as the brightness slider having gone down.
+// depth 0 = off, 1 = fully black at range.
+server float rsd_dist        = 0.0;
+server float rsd_dist_range  = 1024.0;   // map units to reach full depth
+
+// --------------------------------------------------------------- height --
+// Dark pooling below a reference height, or rising as a tide. Above the
+// reference nothing changes.
+server float rsd_height       = 0.0;
+server float rsd_height_range = 256.0;   // units below ref to reach full depth
+
+// 0 fixed at rsd_height_z, 1 follows the player's feet.
+server int   rsd_height_mode  = 0;
+server float rsd_height_z     = 0.0;
+
+// Internal. The resolved reference the shader actually gets -- written each
+// tic from either the slider or the player's position, so the push stays
+// clearscope and the slider is never clobbered by follow mode.
+server float rsd_height_live  = 0.0;
