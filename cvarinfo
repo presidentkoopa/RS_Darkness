@@ -51,3 +51,7 @@ server float rsd_height_z     = 0.0;
 // tic from either the slider or the player's position, so the push stays
 // clearscope and the slider is never clobbered by follow mode.
 server float rsd_height_live  = 0.0;
+
+// Internal. The preset index last applied, so a preset only re-applies when
+// it CHANGES -- not on every map load, which used to wipe slider tweaks.
+server int   rsd_preset_applied = -1;

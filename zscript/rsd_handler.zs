@@ -13,35 +13,46 @@
 
 class RSD_Handler : EventHandler
 {
-	private int lastPreset;
-
+	// A PRESET APPLIES WHEN IT CHANGES, NOT ON EVERY MAP. Apply is a batch of
+	// CVar writes; re-running it on each WorldLoaded wiped whatever had been
+	// tuned on the sliders since the preset was picked, every level. The
+	// last-applied index lives in a CVar (rsd_preset_applied) because this
+	// handler is rebuilt per map and would otherwise forget.
+	//
+	// AND FROM THE MENU. The playsim is paused while the options menu is up,
+	// so a preset picked there was not applied until the menu closed, while
+	// the sliders (read live by Push) moved the picture at once -- which read
+	// as "the menu half works". UiTick runs under the menu; CVar writes are
+	// not scope-bound. Both sides fire only on a change they have not seen.
 	override void WorldLoaded(WorldEvent e)
 	{
-		lastPreset = GetI("rsd_preset", 2);
-		RSD_Presets.Apply(lastPreset);
+		SyncPreset();
 		ResolveHeightRef();
 		Push();
 	}
 
 	override void WorldTick()
 	{
-		int p = GetI("rsd_preset", 2);
-		if (p != lastPreset)
-		{
-			lastPreset = p;
-			RSD_Presets.Apply(p);
-		}
-
+		SyncPreset();
 		ResolveHeightRef();
 		Push();
 	}
 
 	// The playsim stops while the menu is up, so WorldTick alone would freeze
 	// the picture exactly while you are dragging the slider meant to change
-	// it. SetDarkness is clearscope for this reason -- see doombase.zs:1139.
+	// it. SetDarkness is clearscope for this reason -- see doombase.zs.
 	override void UiTick()
 	{
+		SyncPreset();
 		Push();
+	}
+
+	clearscope static void SyncPreset()
+	{
+		int want = GetI("rsd_preset", 4);
+		if (want == GetI("rsd_preset_applied", -1)) return;
+		RSD_Presets.Apply(want);
+		RSD_Presets.I("rsd_preset_applied", want);
 	}
 
 	// Play scope: "where the player's feet are" reads the world, so it cannot
