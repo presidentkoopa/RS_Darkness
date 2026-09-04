@@ -50,6 +50,11 @@ class RSD_Handler : EventHandler
 	clearscope static void SyncPreset()
 	{
 		int want = GetI("rsd_preset", 4);
+		// CLAMPED BEFORE IT LATCHES. rsd_preset is reachable from the console,
+		// and Apply's default case runs Horizon for anything out of range --
+		// storing the out-of-range value as "applied" left the menu blank and
+		// the latch pointing at a preset that does not exist.
+		if (want < 0 || want >= RSD_Presets.COUNT) want = 1;
 		if (want == GetI("rsd_preset_applied", -1)) return;
 		RSD_Presets.Apply(want);
 		RSD_Presets.I("rsd_preset_applied", want);
@@ -66,7 +71,11 @@ class RSD_Handler : EventHandler
 			let pmo = players[consoleplayer].mo;
 			if (pmo)
 			{
-				SetF("rsd_height_live", pmo.pos.z);
+				// OFFSET, or follow mode does almost nothing. The shader
+				// darkens only below the reference, and your feet sit ON the
+				// floor -- so an unoffset reference leaves flat ground alone
+				// entirely and only bites on geometry you are standing above.
+				SetF("rsd_height_live", pmo.pos.z + GetF("rsd_height_offset", 0.0));
 				return;
 			}
 		}

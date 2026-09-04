@@ -20,6 +20,10 @@
 
 class RSD_Presets
 {
+	// How many presets Apply knows. Kept beside them so adding one and
+	// forgetting this is a compile-visible mistake rather than a silent one.
+	const COUNT = 18;
+
 	static void W(String n, double v) { let c = CVar.FindCVar(n); if (c) c.SetFloat(v); }
 	static void I(String n, int v)    { let c = CVar.FindCVar(n); if (c) c.SetInt(v); }
 
@@ -39,12 +43,13 @@ class RSD_Presets
 		W("rsd_dist_range", range);
 	}
 
-	static void Height(double depth, double range, int mode, double z = 0.0)
+	static void Height(double depth, double range, int mode, double z = 0.0, double offset = 0.0)
 	{
 		W("rsd_height", depth);
 		W("rsd_height_range", range);
 		I("rsd_height_mode", mode);
 		W("rsd_height_z", z);
+		W("rsd_height_offset", offset);
 	}
 
 	// Neutral ground, so no preset inherits the last one's spatial terms.
@@ -52,6 +57,67 @@ class RSD_Presets
 	{
 		Dist(0.0, 1024.0);
 		Height(0.0, 256.0, 0, 0.0);
+	}
+
+	// ---- five that use the curve's other three levers ------------------------
+	//
+	// minLight, preGain and postGain were ZERO in all thirteen presets above.
+	// Three of the five curve parameters were dead across the whole set, so
+	// these are built on them rather than being another arrangement of adjust.
+
+	// 13 -- FLAT AMBIENT. The subtract takes every surface to nothing, then
+	// post-gain puts back the same ABSOLUTE amount everywhere. The mapper's
+	// lighting is not dimmed, it is erased and replaced by a uniform bounce:
+	// a bright wall and a dim one end up equally faint. Only shape tells the
+	// rooms apart.
+	static void Ember()
+	{
+		Curve(1, 256.0, 0.0, 0.0, 18.0);
+		Dist(0.55, 896.0);
+	}
+
+	// 14 -- DARK WITH A FLOOR UNDER IT. The first non-zero min-light in the
+	// set, so the curve bites hardest in the MIDDLE of the range instead of at
+	// the bottom: mid-lit surfaces lose most, while both the brightest and the
+	// already-dark survive. Classic drives everything under half to hard zero;
+	// this refuses to reach zero at all, so dark corners stay legible.
+	static void Gloaming()
+	{
+		Curve(1, 140.0, 26.0);
+		Dist(0.35, 1792.0);
+	}
+
+	// 15 -- THE VERTICAL GRADIENT, FIXED. Reference at a room height above the
+	// world floor with the range to match, so the pool spans a storey: black
+	// underfoot, clear overhead. Fixed rather than following, which is the
+	// difference from Silt -- climbing genuinely gets you out of it, and going
+	// up a tower leaves it behind entirely.
+	static void Vault()
+	{
+		Curve(1, 24.0);
+		Height(0.90, 224.0, 0, 224.0);
+	}
+
+	// 16 -- DISTANCE AND NOTHING ELSE. Adjust 0 makes the curve an identity --
+	// every fragment keeps exactly the light the mapper gave it -- so range is
+	// the only thing happening. Tunnel dims the room first and then adds a
+	// bubble; this adds only the bubble, so near surfaces are untouched and
+	// the far ones go to black.
+	static void Lantern()
+	{
+		Curve(1, 0.0);
+		Dist(1.00, 576.0);
+	}
+
+	// 17 -- CAP PLUS PIT. Cap the brightest surfaces so lit rooms stop
+	// shouting, then pool dark BELOW you rather than around you. Eye level
+	// reads evenly lit and only what you climb down into goes black, so lifts,
+	// sewers and pits carry their own darkness. The only preset with a
+	// negative offset.
+	static void Basement()
+	{
+		Curve(3, 108.0);
+		Height(0.85, 192.0, 1, 0.0, -32.0);
 	}
 
 	static void Apply(int idx)
@@ -75,6 +141,11 @@ class RSD_Presets
 		case 10: Overcast();  break;
 		case 11: Crush();     break;
 		case 12: Cavern();    break;
+		case 13: Ember();     break;
+		case 14: Gloaming();  break;
+		case 15: Vault();     break;
+		case 16: Lantern();   break;
+		case 17: Basement();  break;
 		default: Horizon();   break;
 		}
 	}
@@ -124,7 +195,7 @@ class RSD_Presets
 	static void Undertow()
 	{
 		Curve(1, 72.0);
-		Height(0.95, 140.0, 1);
+		Height(0.95, 144.0, 1, 0.0, 48.0);
 	}
 
 	// 8 -- HEIGHT, fixed and deep. The reference sits low and the range is
@@ -134,7 +205,7 @@ class RSD_Presets
 	static void Silt()
 	{
 		Curve(1, 40.0);
-		Height(0.90, 700.0, 0, 64.0);
+		Height(0.90, 224.0, 1, 0.0, 224.0);
 	}
 
 	// 9 -- COMPRESS. Scales everything proportionally rather than subtracting
@@ -170,6 +241,6 @@ class RSD_Presets
 	{
 		Curve(4, 150.0);
 		Dist(0.65, 1300.0);
-		Height(0.55, 320.0, 1);
+		Height(0.55, 320.0, 1, 0.0, 64.0);
 	}
 }

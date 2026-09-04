@@ -47,14 +47,50 @@ server float rsd_height_range = 256.0;   // units below ref to reach full depth
 server int   rsd_height_mode  = 0;
 server float rsd_height_z     = 0.0;
 
+// WHERE THE REFERENCE SITS RELATIVE TO YOU, in follow mode.
+//
+// The shader darkens only BELOW the reference. Following your feet therefore
+// does almost nothing on flat ground -- the floor is at your feet, so it is
+// not below them -- and the pool could only ever appear in geometry you were
+// standing above. Undertow advertised wading to waist height and could not
+// produce it.
+//
+// Offsetting the reference upward puts the top of the pool where the preset
+// actually wants it: about 48 for waist, 64 for over your head. Negative
+// values push it below you, so only what you climb down into goes dark.
+server float rsd_height_offset = 0.0;
+
 // Internal. The resolved reference the shader actually gets -- written each
 // tic from either the slider or the player's position, so the push stays
 // clearscope and the slider is never clobbered by follow mode.
-server float rsd_height_live  = 0.0;
+// NOSAVE, NOT SERVER, and the distinction is load-bearing -- same trap the
+// preset latch below fell into.
+//
+// This is written EVERY TIC with the player's own Z. As a server cvar every
+// one of those writes is queued to the network: 35 a second, forever. A client
+// who is not the arbitrator cannot set it at all and gets the refusal printed
+// to the console at that rate instead.
+//
+// It is also per-client BY DEFINITION -- it is where you are standing. Sending
+// it as server state means every client's dark pool follows the HOST's feet
+// rather than their own, so the follow mode is simply wrong online.
+//
+// nosave writes locally and immediately, never touches the wire, and still
+// persists in the config. It also removes a one-tic lag: a server cvar does
+// not update locally until the write round-trips, so Push was always reading
+// the previous tic's height.
+nosave float rsd_height_live  = 0.0;
 
 // Internal. The preset index last applied, so a preset only re-applies when
 // it CHANGES -- not on every map load, which used to wipe slider tweaks.
-server int   rsd_preset_applied = -1;
+// NOSAVE, NOT SERVER. RS_GlowInTheDark's cvarinfo documents this failure at
+// length: a server cvar is not written locally when you set it, so a latch
+// read back on the next tic still reads its old value and the whole preset
+// re-applies -- more cvar writes, which delays the round trip further, which
+// causes more passes. GlowInTheDark compounded it until the tic's net buffer
+// overflowed. This mod writes twelve cvars per apply rather than fifty-four so
+// it has not hit that cliff, but it is the same defect.
+nosave int   rsd_preset_applied = -1;
 
 // HOW MUCH OF THE DARKNESS ACTORS ARE SPARED, 0 to 1.
 //

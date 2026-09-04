@@ -13,6 +13,11 @@ OptionValue "RSD_Preset"
 	10, "Overcast"
 	11, "Crush"
 	12, "Cavern"
+	13, "Ember"
+	14, "Gloaming"
+	15, "Vault"
+	16, "Lantern"
+	17, "Basement"
 }
 
 OptionValue "RSD_Mode"
@@ -93,6 +98,16 @@ OptionMenu "RSDHeight"
 	StaticText ""
 	Option "Reference", "rsd_height_mode", "RSD_HeightMode"
 	Slider "  Fixed height (Z)", "rsd_height_z", -2048, 2048, 32, 0
+	StaticText ""
+	Slider "  Offset from you", "rsd_height_offset", -256, 256, 8, 0
+	StaticText "Follow mode only. The dark pools BELOW the", "gray"
+	StaticText "reference, and your feet are already on the", "gray"
+	StaticText "floor -- so with no offset, flat ground never", "gray"
+	StaticText "darkens at all and only what you stand above", "gray"
+	StaticText "does. Around 48 pools to your waist, 64 puts", "gray"
+	StaticText "it over your head. Negative sinks it below", "gray"
+	StaticText "you, so only what you climb down into goes", "gray"
+	StaticText "dark.", "gray"
 }
 
 OptionMenu "RSDActors"
@@ -106,7 +121,10 @@ OptionMenu "RSDActors"
 	Slider "Spare actors", "rsd_actor_spare", 0.0, 1.0, 0.05, 2
 	StaticText "0 darkens them with the room. 1 leaves them at", "gray"
 	StaticText "full brightness. Applies to monsters, barrels,", "gray"
-	StaticText "pickups and your hands alike.", "gray"
+	StaticText "pickups, and your hands in either mode --", "gray"
+	StaticText "world actors and view-model hands take the", "gray"
+	StaticText "same exemption, so toggling between them does", "gray"
+	StaticText "not change how they are lit.", "gray"
 }
 
 AddOptionMenu "OptionsMenu"
