@@ -83,6 +83,7 @@ class RSD_Handler : EventHandler
 			// a restore. Nothing was ever written to a sector to put back.
 			Level.SetDarkness(0, 0, 0, 0, 0);
 			Level.SetDarknessSpace(0, 0, 0, 0, 0);
+			Level.SetDarknessActors(0);
 			return;
 		}
 
@@ -92,6 +93,11 @@ class RSD_Handler : EventHandler
 			GetF("rsd_minlight", 0.0),
 			GetF("rsd_pregain", 0.0),
 			GetF("rsd_postgain", 0.0));
+
+		// How much of the darkening actors are spared. The pass takes the
+		// scene down as a whole, monsters included, so a room dark enough to
+		// be worth lighting is a room you cannot see anything coming in.
+		Level.SetDarknessActors(GetF("rsd_actor_spare", 0.4));
 
 		Level.SetDarknessSpace(
 			GetF("rsd_dist", 0.0),

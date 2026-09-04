@@ -55,3 +55,13 @@ server float rsd_height_live  = 0.0;
 // Internal. The preset index last applied, so a preset only re-applies when
 // it CHANGES -- not on every map load, which used to wipe slider tweaks.
 server int   rsd_preset_applied = -1;
+
+// HOW MUCH OF THE DARKNESS ACTORS ARE SPARED, 0 to 1.
+//
+// The darkening applies to the whole scene, which takes the monsters with it.
+// At 0 a room dark enough to make the glow worth having is a room where a
+// thing walking towards you simply is not there. 1 leaves actors at full
+// brightness, which reads as cut out and pasted on.
+//
+// 0.4 keeps them readable as shapes without lifting them out of the room.
+server float rsd_actor_spare = 0.4;

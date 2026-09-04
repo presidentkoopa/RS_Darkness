@@ -48,6 +48,7 @@ OptionMenu "RSDMain"
 	Submenu "Curve", "RSDCurve"
 	Submenu "Distance", "RSDDist"
 	Submenu "Height", "RSDHeight"
+	Submenu "Things In The Dark", "RSDActors"
 }
 
 OptionMenu "RSDCurve"
@@ -92,6 +93,20 @@ OptionMenu "RSDHeight"
 	StaticText ""
 	Option "Reference", "rsd_height_mode", "RSD_HeightMode"
 	Slider "  Fixed height (Z)", "rsd_height_z", -2048, 2048, 32, 0
+}
+
+OptionMenu "RSDActors"
+{
+	Title "Things In The Dark"
+	StaticText "The darkening applies to the whole scene, which", "gray"
+	StaticText "takes the monsters with it. Fully dark is a room", "gray"
+	StaticText "where the thing walking at you is not there at all;", "gray"
+	StaticText "fully spared reads as cut out and pasted on.", "gray"
+	StaticText ""
+	Slider "Spare actors", "rsd_actor_spare", 0.0, 1.0, 0.05, 2
+	StaticText "0 darkens them with the room. 1 leaves them at", "gray"
+	StaticText "full brightness. Applies to monsters, barrels,", "gray"
+	StaticText "pickups and your hands alike.", "gray"
 }
 
 AddOptionMenu "OptionsMenu"
