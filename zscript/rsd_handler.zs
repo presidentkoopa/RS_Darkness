@@ -3,7 +3,7 @@
 // Almost nothing happens here, and that is the point. DarkDoomZ needs ~110
 // lines to walk every sector, rewrite Sector.LightLevel through a curve, keep
 // a backup array so it can undo itself, and fire a network event every single
-// UiTick to notice a slider moved. This pushes three calls.
+// UiTick to notice a slider moved. This pushes four calls.
 //
 // The reason it can be this small is that the four curves already live in the
 // fragment shader (DarknessAt in main.fp), transcribed from the same ZScript
@@ -171,44 +171,35 @@ class RSD_Handler : EventHandler
 		// be worth lighting is a room you cannot see anything coming in.
 		Level.SetDarknessActors(GetF("rsd_actor_spare", 0.4));
 
+		// WHERE THE POOL STARTS.
+		//
+		// Fixed: rsd_height_z, handed over as written.
+		//
+		// Follows your feet: the RENDERER resolves the reference, every frame,
+		// from the camera's interpolated Z plus the offset. It used to be worked
+		// out here from players[consoleplayer].mo.pos.z, which is the raw 35 Hz
+		// position while the view is drawn interpolated, so on lifts and stairs
+		// the pool edge stepped against a smooth camera. The heightRef passed
+		// to SetDarknessSpace is ignored in that mode; rsd_height_z is sent
+		// anyway so the value stays sensible if the mode is ever dropped.
+		//
+		// OFFSET, or follow mode does almost nothing. The shader darkens only
+		// below the reference, and your feet sit ON the floor -- so an unoffset
+		// reference leaves flat ground alone entirely and only bites on geometry
+		// you are standing above.
+		//
+		// Both modes are set on EVERY push, from UiTick too, so Reference and
+		// Offset move the picture with the menu open, and a ClearDarkness from
+		// anywhere (which resets follow to 0) is undone on the next tic.
+		bool follow = GetI("rsd_height_mode", 0) == 1;
+		Level.SetDarknessHeightFollow(follow ? 1 : 0, follow ? GetF("rsd_height_offset", 0.0) : 0.0);
+
 		Level.SetDarknessSpace(
 			distDepth,
 			GetF("rsd_dist_range", 1024.0),
 			hDepth,
-			HeightRef(),
+			GetF("rsd_height_z", 0.0),
 			GetF("rsd_height_range", 256.0));
-	}
-
-	// WHERE THE POOL STARTS, resolved inside the push.
-	//
-	// This used to be resolved in WorldTick only and parked in a cvar for the
-	// push to read, so Fixed height, Offset and Reference moved nothing while
-	// the menu was open -- the playsim is frozen there, and so was the
-	// reference. Clearscope can read the player (play data is readable, just
-	// not writable), so it is worked out here, from UiTick as well.
-	//
-	// It is per-client by definition -- it is where YOU are standing -- which
-	// is why it reads consoleplayer and is never stored as server state.
-	//
-	// Still tic rate: pos.z is the raw tic position while the view is drawn
-	// interpolated, so on lifts and stairs the pool edge steps at 35 Hz against
-	// a smooth camera. Smoothing that needs the renderer to resolve the
-	// reference per frame. The per-frame script hooks are HUD draws
-	// (RenderOverlay/Underlay): flat mode runs them after the scene, so a push
-	// from there lands a frame late, they are skipped with the HUD hidden, and
-	// the tic push would still overwrite them.
-	clearscope static double HeightRef()
-	{
-		if (GetI("rsd_height_mode", 0) == 1)
-		{
-			let pmo = players[consoleplayer].mo;
-			// OFFSET, or follow mode does almost nothing. The shader darkens
-			// only below the reference, and your feet sit ON the floor -- so
-			// an unoffset reference leaves flat ground alone entirely and only
-			// bites on geometry you are standing above.
-			if (pmo) return pmo.pos.z + GetF("rsd_height_offset", 0.0);
-		}
-		return GetF("rsd_height_z", 0.0);
 	}
 
 	// ---- cvar shorthand, clearscope so the push can reach it ---------------

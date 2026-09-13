@@ -134,10 +134,15 @@ has "Re-apply preset" to put its values back after tuning.
 
 NOTHING NEEDS A MAP RESTART
 
-All three calls are clearscope, pushed from UiTick as well as WorldTick, so
+All four calls are clearscope, pushed from UiTick as well as WorldTick, so
 every slider moves the picture while the game is paused and while the menu is
-open -- the height reference included, which is resolved inside the push. No
-network event.
+open -- the height reference included. No network event.
+
+"Follows your feet" is resolved by the renderer, not the script: the push
+sets Level.SetDarknessHeightFollow(1, offset) and every frame the reference is
+the camera's interpolated Z plus the offset, so on lifts and stairs the pool
+edge moves as smoothly as the view. Fixed height sends
+SetDarknessHeightFollow(0, 0) and rsd_height_z as the reference.
 
 Curve set to Off still lets Distance and Height act: the push sends an
 identity curve (subtract 0, no gains) whenever a spatial depth is above 0,
@@ -155,12 +160,13 @@ STATE
 Loads and runs. Confirmed working 2026-08-30.
 
 One thing still unverified by eye: whether "Follows your feet" should track
-the player's Z directly or the view height. It uses pos.z, which puts the
-reference at the floor you are standing on.
+the feet or the view height. It uses the camera's Z (its feet, not its eye),
+which puts the reference at the floor you are standing on. It follows the
+CAMERA, so a chasecam or camera actor carries the pool with it.
 
-Follow mode steps at tic rate. pos.z is the raw 35 Hz position while the view
-is drawn interpolated, so on lifts and stairs the pool edge can visibly step.
-Smoothing it needs the renderer to resolve the reference per frame.
+Follow mode is smooth at draw rate. It used to step at tic rate, because the
+script wrote the player's raw 35 Hz Z every tic while the view was drawn
+interpolated; the renderer now resolves the reference per frame.
 
 Savegames: the look settings are server cvars, so a save carries them and
 loading it puts them back -- that save's preset and its tuned sliders, not
@@ -184,10 +190,11 @@ FILES
   mapinfo               registers the handler (without this: nothing)
   zscript.txt           version guard and includes
   zscript/rsd_presets.zs   four compatibility presets, fourteen showcase
-  zscript/rsd_handler.zs   pushes three engine calls
+  zscript/rsd_handler.zs   pushes four engine calls
 
-SetDarkness, SetDarknessSpace and SetDarknessActors are exported, clearscope,
-by the engine -- the mod itself needs no engine change.
+SetDarkness, SetDarknessSpace, SetDarknessHeightFollow and SetDarknessActors
+are exported, clearscope, by the engine -- the mod itself needs no engine
+change.
 
 These engine fixes belong to this feature, and live in UZDXREMA rather than
 here, because darkness reached things that were never room light, or state
@@ -214,6 +221,12 @@ that should not have outlived its map:
 
 * A map change now clears the level's darkness switches, so an old map's
   darkness is never drawn on the next one before a mod pushes. (p_setup.cpp)
+
+* Follow mode's reference is resolved per frame by the renderer. New
+  SetDarknessHeightFollow: the camera's interpolated Z plus an offset, instead
+  of a Z the script wrote at 35 Hz. ClearDarkness and a map change reset it to
+  absolute. (g_levellocals.h, vmthunks.cpp, hw_drawinfo.cpp, p_setup.cpp,
+  doombase.zs)
 
 The first three follow the rule the engine already applies to glow: darkness
 scales the light a room HAS, and emissive light is not room light. Requires an

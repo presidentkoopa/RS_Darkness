@@ -72,10 +72,12 @@ server float rsd_height_z     = 0.0;
 // values push it below you, so only what you climb down into goes dark.
 server float rsd_height_offset = 0.0;
 
-// The reference the shader actually gets is not a cvar. It is resolved inside
-// the push (RSD_Handler.HeightRef) from these three and the local player's
-// position, so the sliders move it while the menu is open, and it stays
-// per-client: it is where YOU are standing, never the host.
+// The reference the shader actually gets is not a cvar. The push reads these
+// three every tic and from UiTick, so the sliders move it while the menu is
+// open. In follow mode the push hands the offset to the engine
+// (Level.SetDarknessHeightFollow) and the renderer adds it to the camera's
+// interpolated Z each frame, so the pool edge rides lifts and stairs smoothly
+// and stays per-client: it is where YOUR view is, never the host.
 
 // Internal. The preset index last applied, so a preset only re-applies when
 // it CHANGES -- not on every map load, which used to wipe slider tweaks.
