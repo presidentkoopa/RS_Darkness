@@ -7,22 +7,28 @@
 // could not, and they are not supposed to. They are there so the look you
 // already know is still one menu pick away.
 //
-// SHOWCASE (4-12) is the reason this mod exists. Every one of them uses a
-// term a sector fundamentally cannot express -- distance from the eye, or
-// height above the ground -- because a sector holds ONE light number and
-// cannot say where you are standing in it. Each is built around a different
-// lever, so no two should read alike.
+// SHOWCASE (4-17) is the reason this mod exists. All but one use a term a
+// sector fundamentally cannot express -- distance from the eye, or height
+// above the ground -- because a sector holds ONE light number and cannot say
+// where you are standing in it. Crush is the exception: the gamma curve alone,
+// kept because contrast is a lever no other preset pulls. Each is built around
+// a different lever, so no two should read alike.
 //
-// Dark and Abyss reach TRUE black: mode 1 at amount 256 gives outL = L - 256,
-// at or below zero for every input, so the surviving fraction clamps to 0.
-// That only holds while min-light and post-gain are 0, which is why every
-// preset writes them rather than inheriting.
+// Dark reaches TRUE black: mode 1 at amount 256 gives outL = L - 256, at or
+// below zero for every input, so the surviving fraction clamps to 0. That
+// only holds while min-light and post-gain are 0, which is why every preset
+// writes them rather than inheriting.
 
 class RSD_Presets
 {
 	// How many presets Apply knows. Kept beside them so adding one and
 	// forgetting this is a compile-visible mistake rather than a silent one.
 	const COUNT = 18;
+
+	// The preset a fresh install gets, and where an out-of-range rsd_preset
+	// lands. Must match rsd_preset's default in cvarinfo and Apply's default
+	// case -- three places that used to disagree (the clamp picked Light).
+	const DEFAULT = 4;   // Horizon
 
 	static void W(String n, double v) { let c = CVar.FindCVar(n); if (c) c.SetFloat(v); }
 	static void I(String n, int v)    { let c = CVar.FindCVar(n); if (c) c.SetInt(v); }
@@ -59,11 +65,14 @@ class RSD_Presets
 		Height(0.0, 256.0, 0, 0.0);
 	}
 
-	// ---- five that use the curve's other three levers ------------------------
+	// ---- 13-17, the second batch ---------------------------------------------
 	//
-	// minLight, preGain and postGain were ZERO in all thirteen presets above.
-	// Three of the five curve parameters were dead across the whole set, so
-	// these are built on them rather than being another arrangement of adjust.
+	// minLight, preGain and postGain were ZERO in the first thirteen presets:
+	// three of the five curve parameters dead across the whole set. Ember and
+	// Gloaming are built on two of them (post-gain and min-light). Vault,
+	// Lantern and Basement fill gaps in the spatial set instead -- a fixed
+	// reference, distance alone, and a negative offset. Pre-gain is still 0 in
+	// every preset.
 
 	// 13 -- FLAT AMBIENT. The subtract takes every surface to nothing, then
 	// post-gain puts back the same ABSOLUTE amount everywhere. The mapper's
@@ -146,7 +155,7 @@ class RSD_Presets
 		case 15: Vault();     break;
 		case 16: Lantern();   break;
 		case 17: Basement();  break;
-		default: Horizon();   break;
+		default: Horizon();   break;   // DEFAULT
 		}
 	}
 
@@ -179,13 +188,18 @@ class RSD_Presets
 		Dist(0.95, 380.0);
 	}
 
-	// 6 -- TRUE BLACK plus range. The room is already at zero, so what the
-	// distance term is eating is the emissive light on top -- glow, dynamic
-	// lights, anything still burning. A glow across the room becomes a hint
-	// rather than a landmark. Pair with the glow lanes.
+	// 6 -- NEARLY BLACK plus range. Subtract 200 leaves light only on surfaces
+	// lit above 200 -- a fifth of it at full brightness, nothing below 200 --
+	// and the distance term takes even that away across the room. What
+	// survives is the brightest light close to you and nothing further out.
+	//
+	// It used to be subtract 256, which is Dark: every lit fragment is already
+	// at zero before the distance term runs, and glow, sweep and dynamic
+	// lights are all added AFTER the darkness pass, so range had nothing left
+	// to eat and Abyss rendered identically to Dark.
 	static void Abyss()
 	{
-		Curve(1, 256.0);
+		Curve(1, 200.0);
 		Dist(1.00, 850.0);
 	}
 
@@ -198,10 +212,11 @@ class RSD_Presets
 		Height(0.95, 144.0, 1, 0.0, 48.0);
 	}
 
-	// 8 -- HEIGHT, fixed and deep. The reference sits low and the range is
-	// long, so instead of a pool it is a gradient the full height of a room:
-	// black at the floor, clear at the ceiling. Fixed rather than following,
-	// so climbing genuinely gets you out of it.
+	// 8 -- HEIGHT, following you, a storey deep. The reference rides 224 above
+	// your feet with a 224 range, so it is a gradient rather than a pool: full
+	// depth at the floor you stand on, clearing to nothing at about ceiling
+	// height. It goes where you go -- climbing never gets you out of it, which
+	// is the difference from Vault.
 	static void Silt()
 	{
 		Curve(1, 40.0);

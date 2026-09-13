@@ -11,7 +11,8 @@
 
 // ---------------------------------------------------------------- master --
 server bool  rsd_enabled   = true;
-server int   rsd_preset    = 4;          // Horizon -- distance, the thing a sector cannot do
+server int   rsd_preset    = 4;          // Horizon -- distance, the thing a sector cannot do.
+                                         // Must match RSD_Presets.DEFAULT.
 
 // ----------------------------------------------------------------- curve --
 // 0 off, 1 subtract, 2 compress, 3 cap brightest, 4 deepen shadows.
@@ -20,6 +21,17 @@ server int   rsd_mode      = 1;
 
 // How hard, in Doom's 0-255 light units. 96/128/256 are Lite/Classic/Black.
 server float rsd_adjust    = 128.0;
+
+// Internal. What RS_Sweeps' darkness effect adds on top of rsd_adjust while a
+// sweep is acting, in the same light units; 0 when no sweep is acting. The
+// push adds it to the Amount and clamps the sum to 0-256.
+// NOSAVE, NOT SERVER. RS_Sweeps used to move rsd_adjust itself: one server
+// write per crossed sector per tic, each queued to the network, all reading
+// the same not-yet-updated value, and the last one saved to the ini as the
+// player's own Amount. This is local, immediate, and never the player's
+// setting. It still persists in the ini like any nosave cvar, so the handler
+// resets it to 0 whenever a map starts or a save is loaded.
+nosave float rsd_sweep_offset = 0.0;
 
 // A floor under the result. MUST be 0 for the Dark preset to reach true
 // black -- any value here is light that survives everything.
@@ -60,26 +72,10 @@ server float rsd_height_z     = 0.0;
 // values push it below you, so only what you climb down into goes dark.
 server float rsd_height_offset = 0.0;
 
-// Internal. The resolved reference the shader actually gets -- written each
-// tic from either the slider or the player's position, so the push stays
-// clearscope and the slider is never clobbered by follow mode.
-// NOSAVE, NOT SERVER, and the distinction is load-bearing -- same trap the
-// preset latch below fell into.
-//
-// This is written EVERY TIC with the player's own Z. As a server cvar every
-// one of those writes is queued to the network: 35 a second, forever. A client
-// who is not the arbitrator cannot set it at all and gets the refusal printed
-// to the console at that rate instead.
-//
-// It is also per-client BY DEFINITION -- it is where you are standing. Sending
-// it as server state means every client's dark pool follows the HOST's feet
-// rather than their own, so the follow mode is simply wrong online.
-//
-// nosave writes locally and immediately, never touches the wire, and still
-// persists in the config. It also removes a one-tic lag: a server cvar does
-// not update locally until the write round-trips, so Push was always reading
-// the previous tic's height.
-nosave float rsd_height_live  = 0.0;
+// The reference the shader actually gets is not a cvar. It is resolved inside
+// the push (RSD_Handler.HeightRef) from these three and the local player's
+// position, so the sliders move it while the menu is open, and it stays
+// per-client: it is where YOU are standing, never the host.
 
 // Internal. The preset index last applied, so a preset only re-applies when
 // it CHANGES -- not on every map load, which used to wipe slider tweaks.
@@ -88,8 +84,11 @@ nosave float rsd_height_live  = 0.0;
 // read back on the next tic still reads its old value and the whole preset
 // re-applies -- more cvar writes, which delays the round trip further, which
 // causes more passes. GlowInTheDark compounded it until the tic's net buffer
-// overflowed. This mod writes twelve cvars per apply rather than fifty-four so
-// it has not hit that cliff, but it is the same defect.
+// overflowed. This mod writes 12 to 19 cvars per apply rather than fifty-four
+// so it has not hit that cliff, but it is the same defect.
+//
+// A savegame restores the server cvars but not this, so the handler keeps a
+// copy with the save and puts the latch back to match on load.
 nosave int   rsd_preset_applied = -1;
 
 // HOW MUCH OF THE DARKNESS ACTORS ARE SPARED, 0 to 1.
