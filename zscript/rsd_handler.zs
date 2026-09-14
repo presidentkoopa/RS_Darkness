@@ -119,6 +119,10 @@ class RSD_Handler : EventHandler
 		RSD_Presets.I("rsd_preset_applied", want);
 	}
 
+	// Every slider in the menu reaches the picture here, and UiTick runs this,
+	// so they all move under the menu. Declared for menu_lint's live-page check:
+	// LINT-UI-LIVE: rsd_adjust rsd_minlight rsd_pregain rsd_postgain rsd_dist rsd_dist_range
+	// LINT-UI-LIVE: rsd_height rsd_height_range rsd_height_z rsd_height_offset rsd_actor_spare
 	clearscope static void Push()
 	{
 		if (!Level) return;

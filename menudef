@@ -1,3 +1,8 @@
+// menu_lint (tools\menu_lint.py) holds the tuning pages to the live-slider
+// rule: every slider on them has to move the picture while the menu is open,
+// which here means RSD_Handler.Push, run from UiTick -- see LINT-UI-LIVE there.
+// LINT-LIVE: RSDCurve RSDDist RSDHeight RSDActors
+
 OptionValue "RSD_Preset"
 {
 	 0, "Off"
