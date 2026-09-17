@@ -1,60 +1,7 @@
 RS_Darkness
 ===========
 
-Darkness as a shader term. Replaces the darkening half of DarkDoomZ.
-
-Load it with DarkDoomZ UNLOADED, or set ddz_mode 0. Otherwise DarkDoomZ's
-per-sector rewrite runs underneath this and you get both.
-
-
-WHY NOT PER-SECTOR
-------------------
-
-DarkDoomZ walks every sector and overwrites Sector.LightLevel through a curve.
-That is what a mod had to do when a sector's light level was the only lever
-available. It costs:
-
-* It is uniform per room. A 4096-unit hall is one flat dimness wall to wall,
-  because a sector holds exactly one number.
-
-* It is destructive playsim state. It keeps a backup array of every sector's
-  original light so it can undo itself, and when its own lighting option is
-  off it DESTROYS every Lighting thinker rather than fight them for the same
-  field. Doom's blinking and flickering sectors are collateral.
-
-* No spatial term is possible. Darkness cannot deepen with distance or pool at
-  floor level, because one number per room cannot say where you are standing.
-
-* Liveness costs a network event every single tic -- UiTick fires
-  SendNetworkEvent("UpdateLights") forever, and the handler early-outs unless
-  a CVar moved.
-
-The engine already carries the replacement. Level.SetDarkness runs the SAME
-four curves -- subtract, compress, cap brightest, deepen shadows -- transcribed
-from this exact ZScript with the same constants (256, 33, /8), in the same
-order, with the same pre-gain / min-light / post-gain arithmetic.
-
-What changes is the INPUT: the fragment's own light instead of the room's.
-Nothing is written to the map, so there is no backup to hold, nothing to undo,
-and no fight with anything else that touches sector light -- including Doom's
-own flickering sectors, which this composes with for free.
-
-
-THE THREE THAT HAD TO BE THERE
-------------------------------
-
-  Light     subtract 96     (DarkDoom Lite)
-  Classic   subtract 128    (DarkDoom Classic)
-  Dark      subtract 256    (DarkDoom Black)
-
-Dark is TRUE black, not "very dim". With mode 1 and amount 256 the shader
-computes outL = L - 256, which is at or below zero for every possible input,
-so the surviving light fraction clamps to exactly 0.
-
-That only holds while Minimum light and Post-gain are 0. Both are light that
-survives the curve, so either one above zero puts the floor back. Every preset
-writes them explicitly rather than inheriting.
-
+Darkness as a shader term. 
 
 DARK PAIRS WITH THE GLOW LANES ON PURPOSE
 -----------------------------------------
