@@ -3,3 +3,6 @@ version "4.12"
 
 #include "zscript/rsd_presets.zs"
 #include "zscript/rsd_handler.zs"
+// Answers other mods' questions about what the curve does to a light level --
+// RS_Ballistics' shot-out lights needs a floor that is honest under Blackout.
+#include "zscript/rsd_service.zs"
