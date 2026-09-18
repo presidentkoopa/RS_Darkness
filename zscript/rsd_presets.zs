@@ -23,7 +23,7 @@ class RSD_Presets
 {
 	// How many presets Apply knows. Kept beside them so adding one and
 	// forgetting this is a compile-visible mistake rather than a silent one.
-	const COUNT = 18;
+	const COUNT = 20;
 
 	// The preset a fresh install gets, and where an out-of-range rsd_preset
 	// lands. Must match rsd_preset's default in cvarinfo and Apply's default
@@ -59,10 +59,18 @@ class RSD_Presets
 	}
 
 	// Neutral ground, so no preset inherits the last one's spatial terms.
+	//
+	// The actor spare joined this list with Blackout (2026-09-18). It is the one
+	// term that can keep light in the picture after the curve has taken
+	// everything else, so a preset that wants true black has to be able to say
+	// so -- and then every other preset has to put it back, or picking Blackout
+	// once would leave every later preset with unlit monsters. 0.4 is the cvar's
+	// own default.
 	static void Base()
 	{
 		Dist(0.0, 1024.0);
 		Height(0.0, 256.0, 0, 0.0);
+		W("rsd_actor_spare", 0.4);
 	}
 
 	// ---- 13-17, the second batch ---------------------------------------------
@@ -129,6 +137,41 @@ class RSD_Presets
 		Height(0.85, 192.0, 1, 0.0, -32.0);
 	}
 
+	// ---- 18-19, pitch black (owner, 2026-09-18) ------------------------------
+
+	// 18 -- AS BLACK AS THIS MOD GOES. Subtract 256 takes every surface to zero
+	// whatever the mapper lit it at, and the actor spare goes with it, so
+	// monsters and items are not left floating at 40% either. Nothing spatial:
+	// there is nothing left for distance or height to take away.
+	//
+	// What still shows, because all of it is added AFTER the darkness pass:
+	// GlowInTheDark's lanes, RS_Sweeps' bands, dynamic lights, the flashlight,
+	// muzzle flashes and anything fullbright. That is the point -- this is the
+	// preset that makes the glow family the only light in the room.
+	//
+	// Dark (3) is the same curve with actors still spared; this is the complete
+	// blackout.
+	static void Blackout()
+	{
+		Curve(1, 256.0, 0.0, 0.0, 0.0);
+		W("rsd_actor_spare", 0.0);
+	}
+
+	// 19 -- BLACK EXCEPT FOR WHAT IS TRULY BRIGHT. Named Starless, not Void:
+	// `Void()` compiles as a cast to ZScript's void type and the load fails with
+	// "Call to unknown function 'None'". Type names are not method names.
+	//
+	// The gamma curve at full
+	// depth crushes everything the mapper lit below about three quarters, then
+	// distance eats what is left across a room. Where Blackout is a wall of
+	// black, this keeps the brightest lamps and windows as islands you can
+	// steer by, and they vanish as you back away from them.
+	static void Starless()
+	{
+		Curve(4, 255.0);
+		Dist(1.00, 640.0);
+	}
+
 	static void Apply(int idx)
 	{
 		Base();
@@ -155,6 +198,9 @@ class RSD_Presets
 		case 15: Vault();     break;
 		case 16: Lantern();   break;
 		case 17: Basement();  break;
+		// -- pitch black --
+		case 18: Blackout();  break;
+		case 19: Starless();  break;
 		default: Horizon();   break;   // DEFAULT
 		}
 	}
