@@ -3,6 +3,9 @@ version "4.12"
 
 #include "zscript/rsd_presets.zs"
 #include "zscript/rsd_handler.zs"
-// Answers other mods' questions about what the curve does to a light level --
-// RS_Ballistics' shot-out lights needs a floor that is honest under Blackout.
+// Answers THIS MACHINE'S MENU about what the curve leaves of a light level.
+// UI-only on purpose: the answer is the local player's settings, so a playsim
+// caller must not be able to reach it (see the header).
 #include "zscript/rsd_service.zs"
+// The Curve page reads the service out -- and IS the service's caller.
+#include "zscript/rsd_menu.zs"

@@ -1,58 +1,63 @@
-// RS_Darkness -- what the darkness does to a light level, for other mods.
+// RS_Darkness -- what the darkness does to a light level, FOR THIS MACHINE'S MENU.
 //
-// WHY THIS EXISTS. RS_Ballistics is building "shoot the lights out": a round
-// into a light fixture lowers the room's light level. That needs a floor, or a
-// room goes to black and the player cannot play -- and Doom's monsters do not
-// care about light, so darkness only ever costs the player.
+// WHY THIS IS UI-ONLY, AND WHY THAT IS THE WHOLE POINT.
 //
-// "Sector light >= 64" is the wrong floor, because this mod does not subtract
-// a fixed amount. Under Blackout every light level ends at zero; under Horizon
-// almost nothing is taken. The only honest floor is "with the player's current
-// darkness settings, this room still shows X", and the only thing that can
-// answer that is this mod.
+// The question this answers -- "with the darkness settings in front of me, how
+// much of a light level survives?" -- is a question about the LOCAL player's
+// settings. That is exactly right for menu text and exactly wrong for anything
+// that changes the world: two players with different Darkness presets would get
+// different answers, and a playsim path that branched on one of them would put
+// the two machines in different games.
 //
-// A Service rather than a direct call: neither mod has to be loaded for the
-// other to compile, and a missing answer means "no darkness mod is loaded, the
-// raw sector number is the truth" (engine/service.zs; ServiceIterator.Find).
+// That is not hypothetical. This service's first consumer was RS_Ballistics'
+// shot-out-lights floor, and it was removed as a SHIPPED NETPLAY BUG for doing
+// precisely that (RS_Ballistics/zscript/rsb/lights.zs, "the darkness-aware floor
+// is GONE from the decision"; Engine docs/CROSSPLATFORM_COOP_RULE.md).
+//
+// So the guard here is not a comment. Only the UI variant is implemented:
+//
+//   * a ui caller (a menu) gets the answer;
+//   * a PLAY caller cannot reach GetDoubleUI at all -- the scope barrier
+//     refuses it -- and the play GetDouble it can reach returns 0, which this
+//     family's convention already reads as "no answer".
+//
+// A comment is advice. A missing function is a compile error.
 //
 // THE CURVE ONLY, NEVER THE SPATIAL TERMS. The distance and height terms in
-// DarknessAt depend on where the player is standing and how far away the
-// surface is, so a floor built on them would be true in the doorway and false
-// three steps into the room -- it would pass a test and fail in play. The
-// answers here are the curve at the fragment's own light level, which is what
-// the shader computes before distance and height touch it. Whoever shows the
-// floor in a menu says the rest in words.
+// DarknessAt depend on where the player is standing and how far away a surface
+// is, so an answer built on them would be true in the doorway and false three
+// steps into the room. These answers are the curve at a fragment's own light
+// level, which is what the shader computes before distance and height touch it.
 
-class RSD_DarknessService : Service
+class RSD_MenuDarknessService : Service
 {
 	// A real answer is never exactly 0, so a caller can treat 0.0 as "no
-	// answer" -- an unknown request, or no darkness mod at all.
+	// answer" -- an unknown request, no darkness mod, or a play-scope caller
+	// that reached the wrong variant.
 	const EPSILON = 0.0001;
 
-	static double F(String n, double def)
+	ui static double F(String n, double def)
 	{
 		let c = CVar.FindCVar(n); return c ? c.GetFloat() : def;
 	}
-	static int I(String n, int def)
+	ui static int I(String n, int def)
 	{
 		let c = CVar.FindCVar(n); return c ? c.GetInt() : def;
 	}
-	static bool B(String n, bool def)
+	ui static bool B(String n, bool def)
 	{
 		let c = CVar.FindCVar(n); return c ? c.GetBool() : def;
 	}
 
 	// The amount the SHADER is working with, not the menu's Amount: RS_Sweeps'
 	// darkness effect adds rsd_sweep_offset while a band is crossing the level,
-	// and RSD_Handler pushes the sum (rsd_handler.zs). A caller that cached an
-	// answer per level would be wrong for the seconds a sweep is live, which is
-	// exactly when a room is darkest.
-	static double EffectiveAdjust()
+	// and RSD_Handler pushes the sum.
+	ui static double EffectiveAdjust()
 	{
 		return clamp(F("rsd_adjust", 128.0) + F("rsd_sweep_offset", 0.0), 0.0, 256.0);
 	}
 
-	static bool CurveActive()
+	ui static bool CurveActive()
 	{
 		return B("rsd_enabled", true) && I("rsd_mode", 1) > 0;
 	}
@@ -60,7 +65,7 @@ class RSD_DarknessService : Service
 	// The fraction of `lightLevel` (Doom's 0-255) that survives the curve.
 	// Transcribed from DarknessAt in main.fp -- same order, same constants, so
 	// the answer matches what the player is looking at.
-	static double Surviving(double lightLevel)
+	ui static double Surviving(double lightLevel)
 	{
 		if (!CurveActive()) return 1.0;
 
@@ -96,16 +101,13 @@ class RSD_DarknessService : Service
 		return clamp(outL / base, 0.0, 1.0);
 	}
 
-	// The raw sector light needed for `want` units of light to survive, or -1
-	// when no light level reaches it. Walked rather than solved: the four
-	// curves invert differently, mode 3 stops rising once it caps, and 256
-	// steps once when a room is shot is nothing.
+	// The raw sector light needed for `want` units to survive, or -1 when no
+	// light level reaches it. Walked rather than solved: the four curves invert
+	// differently and 256 steps once for a menu row is nothing.
 	//
-	// -1 IS A REAL ANSWER AND MEANS DO NOT DIM AT ALL. Under Blackout the curve
-	// takes every light level to zero, so there is no sector value that keeps a
-	// room visible. A caller that read that as "clamp to 0" would darken a room
-	// to nothing in the one preset where it is already black.
-	static double FloorLight(double want)
+	// -1 IS A REAL ANSWER AND MEANS NOTHING SURVIVES. Under Blackout the curve
+	// takes every light level to zero.
+	ui static double FloorLight(double want)
 	{
 		if (want <= 0.0) return 0.0;
 		if (!CurveActive()) return clamp(want, 0.0, 255.0);
@@ -118,7 +120,11 @@ class RSD_DarknessService : Service
 		return -1.0;
 	}
 
-	override double GetDouble(String request, String stringArg, int intArg,
+	// The ui variant, and the only one implemented. See the header.
+	// NOT `override ui double` -- restating the base's scope is "Attempt to
+	// change scope for virtual function" at LOAD, even when the scope is
+	// exactly what the base declares. The ui-ness comes from the base.
+	override double GetDoubleUI(String request, String stringArg, int intArg,
 		double doubleArg, Object objectArg, Name nameArg)
 	{
 		// Lower-cased so a caller's "Surviving" is not a silent no-answer.

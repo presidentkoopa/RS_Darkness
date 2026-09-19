@@ -68,6 +68,10 @@ OptionMenu "RSDMain"
 
 OptionMenu "RSDCurve"
 {
+	// Appends two gold lines at the BOTTOM saying what the curve actually
+	// leaves of a dim room and a lit one, updated as the sliders move. Nothing
+	// above them moves. See zscript/rsd_menu.zs.
+	Class "RSD_CurveMenu"
 	Title "Curve"
 	StaticText "The four DarkDoom curves, unchanged. What", "gray"
 	StaticText "differs is the input: this pixel's own light", "gray"
